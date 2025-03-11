@@ -1,0 +1,169 @@
+# PRACTICA 1  :  BLINK
+
+El objeticvo de la practica es producir el parpadeo periodico de un led. 
+Se utilizara la salida serie  para depurar  el programa 
+
+El microcontrolador que utilizaremos es el ya comentado en la introducción  **ESP32**
+
+![](https://ae04.alicdn.com/kf/S8dee2f4cafc344e1b57ebc21ad5c11a4P.jpg?fit=600%2C600&ssl=1)
+
+## FUNCIONALIDAD DE LA PRACTICA
+
+1. Iniciar pin de led como salida 
+2. bucle infinito 
+    * encender led  
+    * espera de 500 milisegundos
+    * apagar led 
+    * espera de 500 milisegundos
+
+## Código básico
+
+```c
+#define LED_BUILTIN 2
+#define DELAY 500
+
+void setup() {
+  pinMode(LED_BUILTIN, OUTPUT);
+}
+
+void loop() {
+  digitalWrite(LED_BUILTIN, HIGH);
+  delay(DELAY);
+  digitalWrite(LED_BUILTIN, LOW);
+  delay(DELAY);
+}
+```
+
+## TRABAJOS Y PREGUNTAS 
+
+### Programa modificado para que incluya el envio de datos (ON y OFF) al puerto serie.
+```c
+  void setup() {
+    pinMode(LED_PIN,OUTPUT);
+    Serial.begin(115200);
+    Serial.println("Configuració completa!");
+  }
+
+  void loop() {
+    digitalWrite(LED_PIN, HIGH);  // Encén el LED
+    Serial.println("ON");     //Envia missatge ON
+    delay(DELAY);                   // Espera 500 ms
+    digitalWrite(LED_PIN, LOW);   // Apaga el LED
+    Serial.println("OFF");    //Envia missatge OFF
+    delay(DELAY); 
+  }
+```
+
+#### Diagrama de flujo
+```mermaid
+graph LR
+    A[LED ON] --> B[envio ON]
+    B[envio ON] --> C[DELAY]
+    C[DELAY] --> D[LED OFF]
+    D[LED OFF] --> E[envio OFF]
+    E[envio OFF] --> F[DELAY]
+    F[DELAY] --> A[LED ON]
+```
+
+### Modificar el programa para que actue directamente sobre los registros de los puertos de entrada y salida
+   
+```c
+  uint32_t *gpio_out = (uint32_t *)GPIO_OUT_REG; // Establecer un puntero al registro de I/O
+  void setup() {
+    pinMode(LED_PIN,OUTPUT);
+    Serial.begin(115200);
+  }
+
+  void loop() {
+    *gpio_out |= (1 << 2); // Activar el bit correspondiente al pin 2
+    Serial.println("ON");     
+    delay(DELAY);                   
+    *gpio_out ^= (1 << 2); // Alternar el estado del bit correspondiente al pin 2
+    Serial.println("OFF");
+    delay(DELAY); 
+  }
+```
+
+### Eliminar los delay modificar el pin de salida a uno cualquiera de los que estan disponibles i medir con el osciloscopio cual es la màxima frecuencia de apagado encendido que permite el microcontrolador. Medir la frecuencia en estos cuatro casos: 
+
+   #### Con el envio por el puerto série del mensaje i utilizando las funciones de Arduino
+    ```c
+    void setup() {
+      pinMode(LED_PIN,OUTPUT);
+      Serial.begin(115200);
+    }
+
+    void loop() {
+      digitalWrite(LED_PIN, HIGH);  // Encén el LED
+      Serial.println("ON");     
+      digitalWrite(LED_PIN, LOW);   // Apaga el LED
+      Serial.println("OFF");
+    }
+    ```
+    f=921,1Hz
+
+   #### Con el envio por el puerto série y accedirendo directamente a los registros
+    ```c
+    void setup() {
+      pinMode(LED_PIN,OUTPUT);
+      Serial.begin(115200);
+    }
+
+    void loop() {
+      *gpio_out |= (1 << 2); // Activar el bit correspondiente al pin 2
+      Serial.println("ON");   
+      *gpio_out ^= (1 << 2); // Alternar el estado del bit correspondiente al pin 2
+      Serial.println("OFF");
+    }
+    ```
+    f=145,8Hz
+
+   #### Sin el envio por el puerto série del mensaje i utilizando las funciones de Arduino
+    ```c
+    void setup() {
+      pinMode(LED_PIN,OUTPUT);
+      Serial.begin(115200);
+    }
+
+    void loop() {
+      digitalWrite(LED_PIN, HIGH);  // Encén el LED
+      digitalWrite(LED_PIN, LOW);   // Apaga el LED
+    }
+    ```
+    f=1,4M    
+
+   #### Sin el envio por el puerto série y accedirendo directamente a los registros
+    ```c
+    void setup() {
+      pinMode(LED_PIN,OUTPUT);
+      Serial.begin(115200);
+    }
+
+    void loop() {
+      *gpio_out |= (1 << 2); // Activar el bit correspondiente al pin 2
+      *gpio_out ^= (1 << 2); // Alternar el estado del bit correspondiente al pin 2
+    }
+    ```
+    Con estas caracterísitcas el osciloscapio no mostrava ninguna señal
+
+### Ejercicios Voluntarios:
+
+  #### Leer el valor del sensor de temperatura interno y sacarlo por el puerto serie 
+    ```c
+    #include <Arduino.h>
+    #include "esp_adc_cal.h"
+
+    void setup() {
+        Serial.begin(115200);
+        delay(1000);
+    }
+      
+    void loop() {
+        
+        float tempC = temperatureRead();  // Llegir la temperatura interna de l'ESP32-S3
+        Serial.print("Temperatura: ");
+        Serial.print(tempC);
+        Serial.println(" °C");
+        delay(5000);
+    }
+    ```
