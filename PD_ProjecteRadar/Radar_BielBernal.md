@@ -27,19 +27,43 @@ Total= 6,50€
     F --> A
 ```
 
-## Referencies
+## Descripció del codi
 
-Tutorial d'us per el HC-SR04: https://naylampmechatronics.com/blog/10_tutorial-de-arduino-y-sensor-ultrasonico-hc-sr04.html
-
-## Notes
-
-Per calcular la `distancia` en centímetres a partir del temps que es tarda a rebre la senyal desde el sensor i tenint en compte que el so viatja a uns 343 m/s, que són 0.0343 cm/µs. s'utilitza la seguent formula:
+El sensor HC-SR04 envia una ona ultrasònica quan rep un pols al pin Trig i mesura el temps que triga l'ona a rebotar i tornar cap al sensor. Aquest temps es llegeix pel pin Echo.
+La distància es calcula amb la fórmula següent:
 $$
 \text{Distància (cm)} = \frac{\text{temps}\cdot 0.0343}{2}=\frac{\text{temps (µs)}}{58.0}
 $$
-Es divideix entre 2 perquè es te en compte l'anada i la tornada de la senyal.
+Aquesta constant prové de dividir el temps total entre l’anada i tornada (2 vegades la distància) i el fet que el so viatja a 343 m/s (o 0,0343 cm/µs). La funció getDistance() encapsula aquesta lògica.
 
-Per pantalla podem veure el sistema de radar amb traça persistent. 
+Per el moviment del sensor, el servo SG90 es fa servir per girar el sensor HC-SR04 entre 15° i 165°. Aquest interval evita les zones extremes del moviment del servo on pot ser menys precís.
+La funció actualitzaRadar(int angle) ajusta el servo amb radarServo.write(angle) i espera uns mil·lisegons perquè el moviment es completi abans de mesurar.
+
+En cada angle escanejat, la distància es desa en un array (distancias[]). Aquest array es manté durant múltiples cicles per simular un radar amb traça persistent: es dibuixen totes les línies dels valors mesurats encara que ja no siguin l’últim valor capturat.
+Això es veu tant al display com a la pàgina web (array traces[] a JavaScript).
+
+Es fa servir la biblioteca U8g2 per representar gràficament els valors capturats. El radar es dibuixa mitjançant:
+- Cercles concèntrics per indicar el radi (distància).
+- Línies fixes per referències angulars (45°, 90°, 135°)
+- Línies radials per cada angle mesurat, calculades en coordenades polars.
+$$
+x = \text{centre}_x + r \cdot \cos(\theta)
+$$
+
+$$
+y = \text{centre}_y - r \cdot \sin(\theta)
+$$
+
+La pàgina web genera una interfície gràfica similar a un radar.
+Els valors d’angle i distància es transmeten en temps real mitjançant WebSocket (implementat amb ESPAsyncWebServer i AsyncWebSocket). Cada vegada que es mesura una nova distància, el dispositiu envia un missatge JSON amb aquesta informació.
+```
+String json = "{\"angle\":" + String(angle) + ",\"distance\":" + String(distance, 1) + "}";
+ws.textAll(json);
+```
+Es defineixen funcions de suport per:
+- Convertir entre índex i angle (angleToIndex, indexToAngle)
+- Mapejar l’angle a posicions X/Y en pantalla.
+- Limitar la distància màxima visualitzada a 100 cm.
 
 ## Conexions
 ### Sensor Ultrasonic HC-SR04
